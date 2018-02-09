@@ -70,63 +70,22 @@ export function inject(key: TypeId) {
 }
 
 class Registration {
+		private value: any;
+
+		constructor(private factory: (container: IContainer) => any, 
+				private cache: boolean) 
+		{
+		}
 		resolve(container: IContainer): any {
-				throw 'not implemented';
-		}
-}
-
-class FactoryRegistration {
-		constructor(private factory: (container: IContainer) => any) {
-		}
-
-		resolve(container: IContainer): any {
-				return this.factory(container);
-		}
-}
-
-
-class ConstructorRegistration {
-		factory: (container: IContainer) => any;
-
-		constructor(private implementation: Function) {
-				this.factory = factoryForClass(this.implementation);
-		}
-}
-
-class SingletonRegistration extends ConstructorRegistration {
-		value: any = undefined;
-		
-		constructor(implementation: Function) {
-				super(implementation)
-		}
-		
-		resolve(container: IContainer): any {
-				if(this.value === undefined) {
-						this.value = this.factory(container);
+				if(this.cache) {
+						if(this.value === undefined) {
+								this.value = this.factory(container) || null;
+						}
+						return this.value;
 				}
-				return this.value;
-		}
-}
-
-class TransientRegistration extends ConstructorRegistration {
-		constructor(implementation: Function) {
-				super(implementation);
-		}
-
-		resolve(container: IContainer): any {
 				return this.factory(container);
 		}
 }
-
-class InstanceRegistration {
-		constructor(private instance: any) {
-		}
-
-		resolve(container: IContainer): any {
-				return this.instance;
-		}
-}
-
 
 export class Container implements IContainer {
 		private registrations: Map<string|symbol, Registration>;
@@ -134,8 +93,7 @@ export class Container implements IContainer {
 		constructor() {
 				this.registrations = new Map<string|symbol, Registration>();
 		}
-		registerFactory(type: TypeId|TypeId[], factory: (container: IContainer) => any): this {
-				var registration = new FactoryRegistration(factory);
+		private register(type: TypeId|TypeId[], registration: Registration): this {
 				if(type instanceof Array) {
 						for(var key of type) {
 								this.registrations.set(getTypeId(key), registration);
@@ -145,43 +103,19 @@ export class Container implements IContainer {
 						this.registrations.set(getTypeId(type), registration);
 				}
 				return this;
-	
+		}
+
+		registerFactory(type: TypeId|TypeId[], factory: (container: IContainer) => any): this {
+				return this.register(type,new Registration(factory, false));	
 		}
 		registerSingleton(type: TypeId|TypeId[], implementation: Function): this {
-				var registration = new SingletonRegistration(implementation);
-				if(type instanceof Array) {
-						for(var key of type) {
-								this.registrations.set(getTypeId(key), registration);
-						}
-				}
-				else {
-						this.registrations.set(getTypeId(type), registration);
-				}
-				return this;
+				return this.register(type,new Registration(factoryForClass(implementation), true));
 		}
 		registerTransient(type: TypeId|TypeId[], implementation: Function): this {
-				var registration = new TransientRegistration(implementation);
-				if(type instanceof Array) {
-						for(var key of type) {
-								this.registrations.set(getTypeId(key), registration);
-						}
-				}
-				else {
-						this.registrations.set(getTypeId(type), registration);
-				}
-				return this;
+				return this.register(type,new Registration(factoryForClass(implementation), false));
 		}
 		registerInstance(type: TypeId|TypeId[], instance: any): this {
-				var registration = new InstanceRegistration(instance);
-				if(type instanceof Array) {
-						for(var key of type) {
-								this.registrations.set(getTypeId(key), registration);
-						}
-				}
-				else {
-						this.registrations.set(getTypeId(type), registration);
-				}			
-				return this;
+				return this.register(type,new Registration(() => { return instance; }, true));
 		}
 		use(installer: (container: IContainer) => void): this {
 				installer(this);
