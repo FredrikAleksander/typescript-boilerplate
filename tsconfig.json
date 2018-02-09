@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "allowSyntheticDefaultImports": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+        "target": "es2015",
+        "module": "commonjs",
+		"moduleResolution": "node",
+        "noImplicitAny": false,
+        "sourceMap": true,
+		"outDir": "build",
+		"importHelpers": true
+    },
+	"include": [
+			"src/**/*.ts"
+	],
+    "exclude": [
+        "node_modules"
+    ]
+}
